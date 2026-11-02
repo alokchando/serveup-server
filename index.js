@@ -36,7 +36,7 @@ app.get("/events/upcoming", async (req, res) => {
     const users = await db
       .collection("events")
       .find({
-        eventDate: { $gt: new Date().toISOString() },
+        eventDate: { $gt: new Date() },
         status: "active",
       })
       .sort({ eventDate: 1 })
@@ -54,11 +54,28 @@ app.get("/events/recent", async (req, res) => {
     const users = await db
       .collection("events")
       .find({
-        eventDate: { $gt: new Date().toISOString() },
+        eventDate: { $gt: new Date() },
         status: "active",
       })
       .sort({ eventDate: 1 })
       .limit(6)
+      .toArray();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+  
+});
+app.get("/events/pastevents", async (req, res) => {
+
+   try {
+    const users = await db
+      .collection("events")
+      .find({
+        eventDate: { $lt: new Date() },
+      })
+      .sort({ eventDate: -1 })
+    
       .toArray();
     res.json(users);
   } catch (error) {
