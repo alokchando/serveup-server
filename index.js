@@ -31,13 +31,40 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
-app.get("/events", async (req, res) => {
+app.get("/events/upcoming", async (req, res) => {
   try {
-    const users = await db.collection("events").find({}).toArray();
+    const users = await db
+      .collection("events")
+      .find({
+        eventDate: { $gt: new Date().toISOString() },
+        status: "active",
+      })
+      .sort({ eventDate: 1 })
+      .toArray();
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});
+
+
+app.get("/events/recent", async (req, res) => {
+
+   try {
+    const users = await db
+      .collection("events")
+      .find({
+        eventDate: { $gt: new Date().toISOString() },
+        status: "active",
+      })
+      .sort({ eventDate: 1 })
+      .limit(6)
+      .toArray();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+  
 });
 
 app.listen(PORT, () => {
