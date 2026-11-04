@@ -6,7 +6,12 @@ import cors from "cors";
 dotenv.config();
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 const PORT = 3001;
@@ -27,8 +32,9 @@ export async function connectToMongoDB() {
 
 await connectToMongoDB();
 
-app.get("/", (req, res) => {
-  res.send("API is running...");
+app.get("/events", async (req, res) => {
+  const users = await db.collection("events").find({}).toArray();
+  res.json(users);
 });
 
 app.get("/events/upcoming", async (req, res) => {
@@ -47,10 +53,8 @@ app.get("/events/upcoming", async (req, res) => {
   }
 });
 
-
 app.get("/events/recent", async (req, res) => {
-
-   try {
+  try {
     const users = await db
       .collection("events")
       .find({
@@ -64,24 +68,38 @@ app.get("/events/recent", async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-  
 });
 app.get("/events/pastevents", async (req, res) => {
-
-   try {
+  try {
     const users = await db
       .collection("events")
       .find({
         eventDate: { $lt: new Date() },
       })
       .sort({ eventDate: -1 })
-    
+
       .toArray();
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-  
+});
+
+// create events
+app.post("/events", async (req, res) => {
+  const { title, description, category, image, location, eventDate } = req.body;
+
+  // Create event object
+  const eventData = {
+    ...req.body,
+    status: "active",
+    eventDate: new Date(req.body.eventDate),
+    createdAt: new Date()
+
+  };
+
+  // Insert into MongoDB
+  await db.collection("events").insertOne(eventData);
 });
 
 app.listen(PORT, () => {
