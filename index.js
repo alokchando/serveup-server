@@ -1,5 +1,5 @@
 import express from "express";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import cors from "cors";
 
@@ -87,19 +87,145 @@ app.get("/events/pastevents", async (req, res) => {
 
 // create events
 app.post("/events", async (req, res) => {
-  const { title, description, category, image, location, eventDate } = req.body;
+  const {
+    title,
+    description,
+    category,
+    image,
+    location,
+    eventDate,
+    creatorName,
+    creatorEmail,
+  } = req.body;
 
   // Create event object
   const eventData = {
     ...req.body,
     status: "active",
     eventDate: new Date(req.body.eventDate),
-    createdAt: new Date()
-
+    createdAt: new Date(),
   };
 
   // Insert into MongoDB
   await db.collection("events").insertOne(eventData);
+});
+
+// details
+app.get("/events/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: "Invalid event ID" });
+  }
+
+  const event = await db.collection("events").findOne({
+    _id: new ObjectId(id),
+  });
+
+  if (!event) {
+    return res.status(404).send({ message: "Event not found" });
+  }
+
+  const participantCount = await db.collection("participants").countDocuments({
+    eventId: id,
+  });
+
+  res.send({
+    ...event,
+    participantCount,
+  });
+});
+
+//join
+app.post("/events/:id/join", async (req, res) => {
+  const { id } = req.params;
+
+  const { participantName, participantEmail } = req.body;
+
+  // Check if event exists
+  const event = await db.collection("events").findOne({
+    _id: new ObjectId(id),
+  });
+
+  // Create participant data
+  const participantData = {
+    eventId: id,
+    participantName,
+    participantEmail: participantEmail.toLowerCase(),
+    joinedAt: new Date(),
+  };
+
+  // Save participant
+  await db.collection("participants").insertOne(participantData);
+
+  res.status(201).send({
+    message: "Successfully joined the event",
+  });
+});
+
+// joined events
+app.get("/events/joined/:email", async (req, res) => {
+  const { email } = req.params;
+
+  const participants = await db
+    .collection("participants")
+    .find({ participantEmail: email.toLowerCase() })
+    .toArray();
+
+  const eventIds = participants.map((p) => new ObjectId(p.eventId));
+
+  const events = await db
+    .collection("events")
+    .find({ _id: { $in: eventIds } })
+    .toArray();
+
+  res.send(events);
+});
+
+// Update an event
+app.patch("/events/:id", async (req, res) => {
+  const { id } = req.params;
+  const { creatorEmail, ...updatedData } = req.body;
+
+  const result = await db.collection("events").updateOne(
+    {
+      _id: new ObjectId(id),
+      creatorEmail: creatorEmail.toLowerCase(),
+    },
+    {
+      $set: updatedData,
+    },
+  );
+
+  res.send({ message: "Event updated successfully" });
+});
+
+// Get events created by a user using email
+app.get("/events/my-events/:email", async (req, res) => {
+  const { email } = req.params;
+
+  const events = await db
+    .collection("events")
+    .find({
+      creatorEmail: email.toLowerCase(),
+    })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  res.send(events);
+});
+
+// Delete event
+app.delete("/events/:id", async (req, res) => {
+  const { id } = req.params;
+  const { creatorEmail } = req.body;
+
+  const result = await db.collection("events").deleteOne({
+    _id: new ObjectId(id),
+    creatorEmail: creatorEmail.toLowerCase(),
+  });
+
+  res.send({ message: "Event deleted successfully" });
 });
 
 app.listen(PORT, () => {
