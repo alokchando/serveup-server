@@ -33,7 +33,6 @@ export async function connectToMongoDB() {
 
 await connectToMongoDB();
 
-
 const JWKS = createRemoteJWKSet(
   new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
 );
@@ -157,16 +156,17 @@ app.get("/events/:id", verifyToken, async (req, res) => {
   });
 });
 
-//join
 app.post("/events/:id/join", verifyToken, async (req, res) => {
   const { id } = req.params;
-
-  const { participantName, participantEmail } = req.body;
 
   // Check if event exists
   const event = await db.collection("events").findOne({
     _id: new ObjectId(id),
   });
+
+  // Get user information from JWT
+  const participantName = req.user.name;
+  const participantEmail = req.user.email;
 
   // Create participant data
   const participantData = {
@@ -185,7 +185,7 @@ app.post("/events/:id/join", verifyToken, async (req, res) => {
 });
 
 // joined events
-app.get("/events/joined/:email",verifyToken, async (req, res) => {
+app.get("/events/joined/:email", verifyToken, async (req, res) => {
   const { email } = req.params;
 
   const participants = await db
