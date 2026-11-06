@@ -2,6 +2,7 @@ import express from "express";
 import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import cors from "cors";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 dotenv.config();
 const app = express();
@@ -31,6 +32,34 @@ export async function connectToMongoDB() {
 }
 
 await connectToMongoDB();
+
+
+const JWKS = createRemoteJWKSet(
+  new URL(`${process.env.CLIENT_URL}/api/auth/jwks`),
+);
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send({ msg: "Unauthorized!" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+
+    // Store authenticated user's information
+    req.user = payload;
+
+    next();
+  } catch (error) {
+    console.error("JWT verification failed:", error.message);
+
+    return res.status(401).send({ msg: "Invalid or expired token!" });
+  }
+};
 
 app.get("/events", async (req, res) => {
   const users = await db.collection("events").find({}).toArray();
@@ -86,7 +115,7 @@ app.get("/events/pastevents", async (req, res) => {
 });
 
 // create events
-app.post("/events", async (req, res) => {
+app.post("/events", verifyToken, async (req, res) => {
   const {
     title,
     description,
@@ -111,20 +140,12 @@ app.post("/events", async (req, res) => {
 });
 
 // details
-app.get("/events/:id", async (req, res) => {
+app.get("/events/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
-
-  if (!ObjectId.isValid(id)) {
-    return res.status(400).send({ message: "Invalid event ID" });
-  }
 
   const event = await db.collection("events").findOne({
     _id: new ObjectId(id),
   });
-
-  if (!event) {
-    return res.status(404).send({ message: "Event not found" });
-  }
 
   const participantCount = await db.collection("participants").countDocuments({
     eventId: id,
@@ -137,7 +158,7 @@ app.get("/events/:id", async (req, res) => {
 });
 
 //join
-app.post("/events/:id/join", async (req, res) => {
+app.post("/events/:id/join", verifyToken, async (req, res) => {
   const { id } = req.params;
 
   const { participantName, participantEmail } = req.body;
@@ -164,7 +185,7 @@ app.post("/events/:id/join", async (req, res) => {
 });
 
 // joined events
-app.get("/events/joined/:email", async (req, res) => {
+app.get("/events/joined/:email",verifyToken, async (req, res) => {
   const { email } = req.params;
 
   const participants = await db
@@ -183,7 +204,7 @@ app.get("/events/joined/:email", async (req, res) => {
 });
 
 // Update an event
-app.patch("/events/:id", async (req, res) => {
+app.patch("/events/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { creatorEmail, ...updatedData } = req.body;
 
@@ -201,7 +222,7 @@ app.patch("/events/:id", async (req, res) => {
 });
 
 // Get events created by a user using email
-app.get("/events/my-events/:email", async (req, res) => {
+app.get("/events/my-events/:email", verifyToken, async (req, res) => {
   const { email } = req.params;
 
   const events = await db
@@ -216,7 +237,7 @@ app.get("/events/my-events/:email", async (req, res) => {
 });
 
 // Delete event
-app.delete("/events/:id", async (req, res) => {
+app.delete("/events/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { creatorEmail } = req.body;
 
