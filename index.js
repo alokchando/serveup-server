@@ -46,18 +46,11 @@ const verifyToken = async (req, res, next) => {
 
   const token = authHeader.split(" ")[1];
 
-  try {
-    const { payload } = await jwtVerify(token, JWKS);
+  const { payload } = await jwtVerify(token, JWKS);
 
-    // Store authenticated user's information
-    req.user = payload;
+  req.user = payload;
 
-    next();
-  } catch (error) {
-    console.error("JWT verification failed:", error.message);
-
-    return res.status(401).send({ msg: "Invalid or expired token!" });
-  }
+  next();
 };
 
 app.get("/events", async (req, res) => {
@@ -155,7 +148,7 @@ app.get("/events/:id", verifyToken, async (req, res) => {
     participantCount,
   });
 });
-
+// joined invents
 app.post("/events/:id/join", verifyToken, async (req, res) => {
   const { id } = req.params;
 
