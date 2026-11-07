@@ -132,7 +132,7 @@ app.post("/events", verifyToken, async (req, res) => {
 });
 
 // details
-app.get("/events/:id", verifyToken, async (req, res) => {
+app.get("/events/:id", async (req, res) => {
   const { id } = req.params;
 
   const event = await db.collection("events").findOne({
@@ -246,4 +246,4 @@ app.listen(PORT, () => {
   console.log(`Server is running on ${PORT}`);
 });
 
-export default app
+export default app;
