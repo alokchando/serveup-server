@@ -122,6 +122,12 @@ app.post("/events", verifyToken, async (req, res) => {
 
     const startDate = new Date(eventDate);
 
+    if (isNaN(startDate.getTime()) || startDate <= new Date()) {
+      return res.status(400).send({
+        message: "Please select a valid future date.",
+      });
+    }
+
     // Create event object
     const eventData = {
       title: title.trim(),
@@ -130,14 +136,20 @@ app.post("/events", verifyToken, async (req, res) => {
       image,
       location: location.trim(),
       eventDate: startDate,
-      endDate: new Date(startDate.getTime()),
+      endDate: new Date(startDate.getTime() + 2 * 60 * 60 * 1000),
       creatorName,
       creatorEmail,
       status: "active",
       createdAt: new Date(),
     };
 
-    await db.collection("events").insertOne(eventData);
+    const result = await db.collection("events").insertOne(eventData);
+
+    res.status(201).send({
+      success: true,
+      message: "Event created successfully!",
+      insertedId: result.insertedId,
+    });
   } catch (error) {
     res.status(500).send({
       message: "Failed to create event.",
