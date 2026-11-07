@@ -125,6 +125,7 @@ app.post("/events", verifyToken, async (req, res) => {
     status: "active",
     eventDate: new Date(req.body.eventDate),
     createdAt: new Date(),
+    endDate:new Date(req.body.eventDate),
   };
 
   // Insert into MongoDB
