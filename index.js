@@ -106,32 +106,47 @@ app.get("/events/pastevents", async (req, res) => {
   }
 });
 
-// create events
+// Create event
 app.post("/events", verifyToken, async (req, res) => {
-  const {
-    title,
-    description,
-    category,
-    image,
-    location,
-    eventDate,
-    creatorName,
-    creatorEmail,
-  } = req.body;
+  try {
+    const {
+      title,
+      description,
+      category,
+      image,
+      location,
+      eventDate,
+    } = req.body;
 
-  // Create event object
-  const eventData = {
-    ...req.body,
-    status: "active",
-    eventDate: new Date(req.body.eventDate),
-    createdAt: new Date(),
-    endDate:new Date(req.body.eventDate),
-  };
+    const eventData = {
+      title,
+      description,
+      category,
+      image,
+      location,
+      creatorName: req.user.name,
+      creatorEmail: req.user.email,
+      creatorId: req.user.id,
+      status: "active",
+      eventDate: new Date(eventDate),
+      endDate: new Date(eventDate),
+      createdAt: new Date(),
+    };
 
-  // Insert into MongoDB
-  await db.collection("events").insertOne(eventData);
+    const result = await db.collection("events").insertOne(eventData);
+
+    res.status(201).send({
+      success: true,
+      message: "Event created successfully!",
+      insertedId: result.insertedId,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Failed to create event.",
+    });
+  }
 });
-
 // details
 app.get("/events/:id", async (req, res) => {
   const { id } = req.params;
