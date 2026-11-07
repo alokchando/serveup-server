@@ -64,7 +64,7 @@ app.get("/events/upcoming", async (req, res) => {
       .collection("events")
       .find({
         eventDate: { $gt: new Date() },
-        status: "active",
+        // status: "active",
       })
       .sort({ eventDate: 1 })
       .toArray();
@@ -79,8 +79,8 @@ app.get("/events/recent", async (req, res) => {
     const users = await db
       .collection("events")
       .find({
-        eventDate: { $gt: new Date() },
-        status: "active",
+        eventDate: { $gt: new Date() }
+        // status: "active",
       })
       .sort({ eventDate: 1 })
       .limit(6)
