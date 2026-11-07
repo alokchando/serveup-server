@@ -106,7 +106,7 @@ app.get("/events/pastevents", async (req, res) => {
   }
 });
 
-// Create event
+// Create Event
 app.post("/events", verifyToken, async (req, res) => {
   try {
     const {
@@ -116,37 +116,35 @@ app.post("/events", verifyToken, async (req, res) => {
       image,
       location,
       eventDate,
+      creatorName,
+      creatorEmail,
     } = req.body;
 
+    const startDate = new Date(eventDate);
+
+    // Create event object
     const eventData = {
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim(),
       category,
       image,
-      location,
-      creatorName: req.user.name,
-      creatorEmail: req.user.email,
-      creatorId: req.user.id,
+      location: location.trim(),
+      eventDate: startDate,
+      endDate: new Date(startDate.getTime()),
+      creatorName,
+      creatorEmail,
       status: "active",
-      eventDate: new Date(eventDate),
-      endDate: new Date(eventDate),
       createdAt: new Date(),
     };
 
-    const result = await db.collection("events").insertOne(eventData);
-
-    res.status(201).send({
-      success: true,
-      message: "Event created successfully!",
-      insertedId: result.insertedId,
-    });
+    await db.collection("events").insertOne(eventData);
   } catch (error) {
     res.status(500).send({
-      success: false,
       message: "Failed to create event.",
     });
   }
 });
+
 // details
 app.get("/events/:id", async (req, res) => {
   const { id } = req.params;
@@ -164,8 +162,6 @@ app.get("/events/:id", async (req, res) => {
     participantCount,
   });
 });
-
-
 
 // join invents
 app.post("/events/:id/join", verifyToken, async (req, res) => {
