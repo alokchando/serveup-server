@@ -149,7 +149,10 @@ app.get("/events/:id", async (req, res) => {
     participantCount,
   });
 });
-// joined invents
+
+
+
+// join invents
 app.post("/events/:id/join", verifyToken, async (req, res) => {
   const { id } = req.params;
 
